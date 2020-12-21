@@ -50,6 +50,34 @@ Create a 16G swapfile in the `/var` directory:
 # chmod 600 /mnt/var/swapfile
 ```
 
+## Prepare the Disk (Encrypted)
+
+The goal will be to encrypt the entire disk and still use the kernel to boot (EFISTUB).
+
+> The device mapper is a framework provided by the Linux kernel for mapping physical block devices 
+> onto higher-level virtual block devices.
+
+`crypt` is one of the available mapping targets.
+
+> crypt – provides data encryption, by using the Linux kernel's Crypto API.
+
+`dm-crypt` is the name of the encryption subsystem in the Linux kernel which uses the Crypto API
+together with the crypt mapping target.
+
+> The dm-crypt device mapper target resides entirely in kernel space, and is only concerned with 
+> encryption of the block device – it does not interpret any data itself. It relies on user space 
+> front-ends to create and activate encrypted volumes, and manage authentication.
+
+`dmsetup` is a part of LVM2: https://www.sourceware.org/dm/
+
+> The userspace code (dmsetup and libdevmapper) is now maintained alongside the LVM2 source 
+> available from http://sourceware.org/lvm2/. To build / install it without LVM2 use 
+> 'make device-mapper' / 'make device-mapper_install'. 
+
+https://sourceware.org/git/?p=lvm2.git;a=blob;f=INSTALL;h=8d0d54de333dbdf6a4fa040d6b87565c2e518229;hb=HEAD
+
+...
+
 ## Prepare the OS
 
 Regardless of the OS of choice, we need to perform the following:
