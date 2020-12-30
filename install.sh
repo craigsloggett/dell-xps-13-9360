@@ -55,6 +55,19 @@ create_cmdline() {
     printf '%s\n' "root=PARTUUID=$id" > ${root_mount_point:-}/boot/cmdline.txt
 }
 
+chroot_command() {
+	# A simple chroot wrapper to execute commands in the new environment.	
+	chroot "$root_mount_point" /usr/bin/env -i \
+		HOME=/root \
+		TERM="$TERM" \
+		SHELL=/bin/sh \
+		USER=root \
+		CFLAGS="${CFLAGS:--march=x86-64 -mtune=generic -pipe -Os}" \
+		CXXFLAGS="${CXXFLAGS:--march=x86-64 -mtune=generic -pipe -Os}" \
+		MAKEFLAGS="${MAKEFLAGS:--j$(nproc 2>/dev/null || echo 1)}" \
+		/bin/sh -c "$1"
+}
+
 main() {
     # Globally disable globbing and enable exit-on-error.
     set -ef
