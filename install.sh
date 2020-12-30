@@ -57,30 +57,31 @@ create_cmdline() {
 
 chroot_command() {
 
-	chroot_args=()  # We don't want this to be a blank string so the args are IFS separated.
 	# getopts /optstring/ /name/ [/arg/...]
-	while getopts :u: name; do
+	while getopts :c:u: name; do
 		case $name in
+			c)	cmd="$OPTARG" ;;
 			u)	username="$OPTARG" ;;
 			:)	printf '%s: Option argument is missing.' "$OPTARG" ;;
 			?)	printf '%s: Invalid option.' "$OPTARG" ;;
 		esac
 	done
 	
+	[ -z $cmd ] || cmd_args=($cmd)
 	# If no username is supplied, then use default (root).
-	[ -z $username ] || chroot_args=+(--userspec $username)
+	[ -z $username ] || chroot_args=(--userspec $username)
 	
 	# A simple chroot wrapper to execute commands in the new environment.	
 	chroot "${chroot_args[@]}" -- "$root_mount_point" \
 		/usr/bin/env -i \
-			HOME=/root \
+			HOME="${username:+/home}/${username:-root}" \
 			TERM="$TERM" \
 			SHELL=/bin/sh \
 			USER=root \
 			CFLAGS="${CFLAGS:--march=x86-64 -mtune=generic -pipe -Os}" \
 			CXXFLAGS="${CXXFLAGS:--march=x86-64 -mtune=generic -pipe -Os}" \
 			MAKEFLAGS="${MAKEFLAGS:--j$(nproc 2>/dev/null || echo 1)}" \
-		/bin/sh -c "$*"
+		/bin/sh -c "${cmd_args[@]}"
 }
 
 setup_repo_directory() {
