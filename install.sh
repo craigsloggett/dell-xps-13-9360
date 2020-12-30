@@ -56,16 +56,46 @@ create_cmdline() {
 }
 
 chroot_command() {
-	# A simple chroot wrapper to execute commands in the new environment.	
-	chroot "$root_mount_point" /usr/bin/env -i \
-		HOME=/root \
-		TERM="$TERM" \
-		SHELL=/bin/sh \
-		USER=root \
-		CFLAGS="${CFLAGS:--march=x86-64 -mtune=generic -pipe -Os}" \
-		CXXFLAGS="${CXXFLAGS:--march=x86-64 -mtune=generic -pipe -Os}" \
-		MAKEFLAGS="${MAKEFLAGS:--j$(nproc 2>/dev/null || echo 1)}" \
-		/bin/sh -c "$1"
+
+	# getopts /optstring/ /name/ [/arg/...]
+	while getopts :abc:u: name
+	do
+		case $name in
+			c)	testing="$OPTARG" ;;
+			u)	username="$OPTARG" ;;
+			?)   	printf '%s: Invalid option.' "$OPTARG" ;;
+			:)	printf '%s: Option argument is missing.' "$OPTARG" ;;
+		esac
+	done
+	
+	
+#	# A simple chroot wrapper to execute commands in the new environment.	
+#	chroot "$root_mount_point" /usr/bin/env -i \
+#		HOME=/root \
+#		TERM="$TERM" \
+#		SHELL=/bin/sh \
+#		USER=root \
+#		CFLAGS="${CFLAGS:--march=x86-64 -mtune=generic -pipe -Os}" \
+#		CXXFLAGS="${CXXFLAGS:--march=x86-64 -mtune=generic -pipe -Os}" \
+#		MAKEFLAGS="${MAKEFLAGS:--j$(nproc 2>/dev/null || echo 1)}" \
+#		/bin/sh -c "$*"
+}
+
+setup_repo_directory() {
+	# Source Directories
+	mkdir -p "$HOME/.local/src/github.com/kisslinux"
+	mkdir -p "$HOME/.local/src/github.com/nerditup"
+
+	# Repo Directory
+	mkdir -p "$HOME/.local/repos/kisslinux"
+
+	# Clone the source repositories.
+	( cd "$HOME/.local/src/github.com/kisslinux" && git clone https://github.com/kisslinux/repo.git )
+	( cd "$HOME/.local/src/github.com/nerditup" && git clone https://github.com/nerditup/kisslinux.git )
+
+	ln -s "$HOME/.local/src/github.com/nerditup/kisslinux/" "$HOME/.local/repos/kisslinux/personal"
+	ln -s "$HOME/.local/src/github.com/kisslinux/repo/core/" "$HOME/.local/repos/kisslinux/core"
+	ln -s "$HOME/.local/src/github.com/kisslinux/repo/extra/" "$HOME/.local/repos/kisslinux/extra"
 }
 
 main() {
