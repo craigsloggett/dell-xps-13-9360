@@ -56,18 +56,18 @@ create_cmdline() {
 }
 
 chroot_command() {
+	# usage: chroot_command -u nerditup -c 'echo "$PATH"'
 
 	# getopts /optstring/ /name/ [/arg/...]
 	while getopts :c:u: name; do
 		case $name in
-			c)	cmd="$OPTARG" ;;
+			c)	cmd=("$OPTARG") ;;
 			u)	username="$OPTARG" ;;
 			:)	printf '%s: Option argument is missing.' "$OPTARG" ;;
 			?)	printf '%s: Invalid option.' "$OPTARG" ;;
 		esac
 	done
 	
-	[ -z $cmd ] || cmd_args=($cmd)
 	# If no username is supplied, then use default (root).
 	[ -z $username ] || chroot_args=(--userspec $username)
 	
@@ -81,7 +81,7 @@ chroot_command() {
 			CFLAGS="${CFLAGS:--march=x86-64 -mtune=generic -pipe -Os}" \
 			CXXFLAGS="${CXXFLAGS:--march=x86-64 -mtune=generic -pipe -Os}" \
 			MAKEFLAGS="${MAKEFLAGS:--j$(nproc 2>/dev/null || echo 1)}" \
-		/bin/sh -c "${cmd_args[@]}"
+		/bin/sh -c "${cmd[@]}"
 }
 
 setup_repo_directory() {
