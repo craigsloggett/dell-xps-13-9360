@@ -57,28 +57,30 @@ create_cmdline() {
 
 chroot_command() {
 
+	chroot_args=()  # We don't want this to be a blank string so the args are IFS separated.
 	# getopts /optstring/ /name/ [/arg/...]
-	while getopts :abc:u: name
-	do
+	while getopts :u: name; do
 		case $name in
-			c)	testing="$OPTARG" ;;
 			u)	username="$OPTARG" ;;
-			?)   	printf '%s: Invalid option.' "$OPTARG" ;;
 			:)	printf '%s: Option argument is missing.' "$OPTARG" ;;
+			?)	printf '%s: Invalid option.' "$OPTARG" ;;
 		esac
 	done
 	
+	# If no username is supplied, then use default (root).
+	[ -z $username ] || chroot_args=+(--userspec $username)
 	
-#	# A simple chroot wrapper to execute commands in the new environment.	
-#	chroot "$root_mount_point" /usr/bin/env -i \
-#		HOME=/root \
-#		TERM="$TERM" \
-#		SHELL=/bin/sh \
-#		USER=root \
-#		CFLAGS="${CFLAGS:--march=x86-64 -mtune=generic -pipe -Os}" \
-#		CXXFLAGS="${CXXFLAGS:--march=x86-64 -mtune=generic -pipe -Os}" \
-#		MAKEFLAGS="${MAKEFLAGS:--j$(nproc 2>/dev/null || echo 1)}" \
-#		/bin/sh -c "$*"
+	# A simple chroot wrapper to execute commands in the new environment.	
+	chroot "${chroot_args[@]}" -- "$root_mount_point" \
+		/usr/bin/env -i \
+			HOME=/root \
+			TERM="$TERM" \
+			SHELL=/bin/sh \
+			USER=root \
+			CFLAGS="${CFLAGS:--march=x86-64 -mtune=generic -pipe -Os}" \
+			CXXFLAGS="${CXXFLAGS:--march=x86-64 -mtune=generic -pipe -Os}" \
+			MAKEFLAGS="${MAKEFLAGS:--j$(nproc 2>/dev/null || echo 1)}" \
+		/bin/sh -c "$*"
 }
 
 setup_repo_directory() {
@@ -101,9 +103,6 @@ setup_repo_directory() {
 main() {
     # Globally disable globbing and enable exit-on-error.
     set -ef
-
-    # Set the log colours.
-    lcol='\033[1;33m' lcol2='\033[1;34m' lclr='\033[m'
 
     cd $HOME
 
