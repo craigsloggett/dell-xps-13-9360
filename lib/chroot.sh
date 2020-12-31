@@ -12,7 +12,7 @@ chroot_helper() {
             \? )  printf '%s: Invalid option.\n' "$OPTARG" ;;
         esac
     done
-    shift $(( $OPTIND - 1 ))
+    shift $(( OPTIND - 1 ))
 
     # Target must be present and valid.
     [ -z "${target:-}" ] && { printf 'Target must be present.\n'; return 1; }
@@ -26,8 +26,8 @@ chroot_helper() {
           TERM="$TERM" \
           SHELL=/bin/sh \
           USER="${username:-root}" \
-          CFLAGS="${CFLAGS:--march=x86-64 -mtune=generic -pipe -Os}" \
-          CXXFLAGS="${CXXFLAGS:--march=x86-64 -mtune=generic -pipe -Os}" \
+          CFLAGS="${CFLAGS:--march=native -mtune=generic -pipe -Os}" \
+          CXXFLAGS="${CXXFLAGS:--march=native -mtune=generic -pipe -Os}" \
           MAKEFLAGS="${MAKEFLAGS:--j$(nproc 2>/dev/null || printf '1')}"
         )
 
