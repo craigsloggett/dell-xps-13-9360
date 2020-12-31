@@ -98,7 +98,7 @@ chroot_helper () {
     # A simple chroot wrapper to execute commands in the new environment.	
     chroot "${chroot_args[@]}" -- "$target" \
         /usr/bin/env -i "${env[@]}" \
-        /bin/sh "${cmd[@]}"
+        /bin/sh -l "${cmd[@]}"
 }
 
 setup_repo_directory() {
