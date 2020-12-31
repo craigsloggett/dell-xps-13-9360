@@ -16,7 +16,7 @@ ssid=Jupiter-WiFi-5GHz
 
 # Useful Functions
 
-prepare_disk() {
+prepare_disk () {
     # Format the drive using either nvme format or dd.
     # Partition the disk (using GPT).
     # Format the EFI partition as FAT.
@@ -24,14 +24,14 @@ prepare_disk() {
     :
 }
 
-mount_disk() {
+mount_disk () {
     # Mount the root partition to /mnt
     # Create the /boot directory.
     # Mount the EFI partition to /mnt/boot 
     :
 }
 
-create_swapfile() {
+create_swapfile () {
     root=$root_mount_point
     block_size=$(stat -fc %s $root)
     block_count="4M"
@@ -47,7 +47,7 @@ create_swapfile() {
     mkswap "$root/var/swapfile"
 }
 
-create_cmdline() {
+create_cmdline () {
     line=$(blkid $1)
     id=${line#*PARTUUID=\"}
     id=${id%%\"*}
@@ -55,33 +55,41 @@ create_cmdline() {
     printf '%s\n' "root=PARTUUID=$id" > ${root_mount_point:-}/boot/cmdline.txt
 }
 
-chroot_command() {
-	# usage: chroot_command -u nerditup -c 'echo "$PATH"'
+chroot_helper () {
 
-	# getopts /optstring/ /name/ [/arg/...]
-	while getopts :c:u: name; do
-		case $name in
-			c)	cmd=("$OPTARG") ;;
-			u)	username="$OPTARG" ;;
-			:)	printf '%s: Option argument is missing.' "$OPTARG" ;;
-			?)	printf '%s: Invalid option.' "$OPTARG" ;;
-		esac
-	done
-	
-	# If no username is supplied, then use default (root).
-	[ -z $username ] || chroot_args=(--userspec $username)
-	
-	# A simple chroot wrapper to execute commands in the new environment.	
-	chroot "${chroot_args[@]}" -- "$root_mount_point" \
-		/usr/bin/env -i \
-			HOME="${username:+/home}/${username:-root}" \
-			TERM="$TERM" \
-			SHELL=/bin/sh \
-			USER=root \
-			CFLAGS="${CFLAGS:--march=x86-64 -mtune=generic -pipe -Os}" \
-			CXXFLAGS="${CXXFLAGS:--march=x86-64 -mtune=generic -pipe -Os}" \
-			MAKEFLAGS="${MAKEFLAGS:--j$(nproc 2>/dev/null || echo 1)}" \
-		/bin/sh -c "${cmd[@]}"
+    # Parse the options with `getopts`
+    # Pull out optional parameter, username.
+    # -> if username is omitted, use default of root.
+
+    # getopts /optstring/ /name/ [/arg/...]
+    while getopts :t:u: name; do
+        case $name in
+            t  )  target="$OPTARG" ;; 
+            u  )  username="$OPTARG" ;;
+            :  )  printf '%s: Argument is missing.\n' "$OPTARG" ;;
+            \? )  printf '%s: Invalid option.\n' "$OPTARG" ;;
+        esac
+    done
+    shift $(( $OPTIND - 1 ))
+
+    # Target must be present and valid.
+    [ -z "${target:-}" ] && { printf 'Target must be present.\n'; return 1; }
+    [ -d "${target:-}" ] || { printf 'Target must be a valid directory.\n'; return 1; }
+
+    # Specify the username if present, otherwise use the defaults (root).
+    [ -z "${username:-}" ] && chroot_args=(--userspec $username)
+
+    # A simple chroot wrapper to execute commands in the new environment.	
+    chroot "${chroot_args[@]}" -- "$target" \
+        /usr/bin/env -i \
+            HOME="${username:+/home}/${username:-root}" \
+            TERM="$TERM" \
+            SHELL=/bin/sh \
+            USER="${username:-root}" \
+            CFLAGS="${CFLAGS:--march=x86-64 -mtune=generic -pipe -Os}" \
+            CXXFLAGS="${CXXFLAGS:--march=x86-64 -mtune=generic -pipe -Os}" \
+            MAKEFLAGS="${MAKEFLAGS:--j$(nproc 2>/dev/null || printf '1')}" \
+        /bin/sh -c "$@"
 }
 
 setup_repo_directory() {
