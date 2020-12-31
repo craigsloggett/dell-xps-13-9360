@@ -6,7 +6,8 @@
 # Created by Craig Sloggett.
 
 # Import helper functions.
-source lib/*
+
+source lib/chroot.sh
 
 # Configuration Parameters
 
