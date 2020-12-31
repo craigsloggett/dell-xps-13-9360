@@ -39,5 +39,3 @@ chroot_helper() {
         /usr/bin/env -i "${env[@]}" \
         /bin/sh -l "${cmd[@]}"
 }
-
-chroot_helper "$@"
