@@ -58,36 +58,19 @@ create_cmdline () {
 
 setup_repo_directory() {
 	# Source Directories
-	mkdir -p "$HOME/.local/src/github.com/kisslinux"
-	mkdir -p "$HOME/.local/src/github.com/nerditup"
+	mkdir -p "$1/.local/src/github.com/kisslinux"
+	mkdir -p "$1/.local/src/github.com/nerditup"
 
 	# Repo Directory
-	mkdir -p "$HOME/.local/repos/kisslinux"
+	mkdir -p "$1/.local/repos/kisslinux"
 
 	# Clone the source repositories.
-	( cd "$HOME/.local/src/github.com/kisslinux" && git clone https://github.com/kisslinux/repo.git )
-	( cd "$HOME/.local/src/github.com/nerditup" && git clone https://github.com/nerditup/kisslinux.git )
+	( cd "$1/.local/src/github.com/kisslinux" && git clone https://github.com/kisslinux/repo.git )
+	( cd "$1/.local/src/github.com/nerditup" && git clone https://github.com/nerditup/kisslinux.git )
 
-	ln -s "$HOME/.local/src/github.com/nerditup/kisslinux/" "$HOME/.local/repos/kisslinux/personal"
-	ln -s "$HOME/.local/src/github.com/kisslinux/repo/core/" "$HOME/.local/repos/kisslinux/core"
-	ln -s "$HOME/.local/src/github.com/kisslinux/repo/extra/" "$HOME/.local/repos/kisslinux/extra"
-}
-
-setup_repo_directory() {
-	# Source Directories
-	mkdir -p "$HOME/.local/src/github.com/kisslinux"
-	mkdir -p "$HOME/.local/src/github.com/nerditup"
-
-	# Repo Directory
-	mkdir -p "$HOME/.local/repos/kisslinux"
-
-	# Clone the source repositories.
-	( cd "$HOME/.local/src/github.com/kisslinux" && git clone https://github.com/kisslinux/repo.git )
-	( cd "$HOME/.local/src/github.com/nerditup" && git clone https://github.com/nerditup/kisslinux.git )
-
-	ln -s "$HOME/.local/src/github.com/nerditup/kisslinux/" "$HOME/.local/repos/kisslinux/personal"
-	ln -s "$HOME/.local/src/github.com/kisslinux/repo/core/" "$HOME/.local/repos/kisslinux/core"
-	ln -s "$HOME/.local/src/github.com/kisslinux/repo/extra/" "$HOME/.local/repos/kisslinux/extra"
+	ln -s "$1/.local/src/github.com/nerditup/kisslinux/" "$1/.local/repos/kisslinux/personal"
+	ln -s "$1/.local/src/github.com/kisslinux/repo/core/" "$1/.local/repos/kisslinux/core"
+	ln -s "$1/.local/src/github.com/kisslinux/repo/extra/" "$1/.local/repos/kisslinux/extra"
 }
 
 main() {
@@ -111,7 +94,7 @@ main() {
     chroot_helper -t /mnt adduser nerditup
 
     # Setup repos?
-    chroot_helper -t /mnt $(setup_repo_directory)
+    setup_repo_directory /mnt/home/nerditup
 
     # Set the hostname.
     printf '%s\n' "$hostname" > /mnt/etc/hostname
