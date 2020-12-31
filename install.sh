@@ -77,7 +77,7 @@ chroot_helper () {
     [ -d "${target:-}" ] || { printf 'Target must be a valid directory.\n'; return 1; }
 
     # Specify the username if present, otherwise use the defaults (root).
-    [ -z "${username:-}" ] && chroot_args=(--userspec $username)
+    [ -n "${username:-}" ] && chroot_args=(--userspec $username)
 
     # A simple chroot wrapper to execute commands in the new environment.	
     chroot "${chroot_args[@]}" -- "$target" \
