@@ -2,8 +2,6 @@
 #
 # This is a simple install script written in POSIX shell
 # to be used to install KISS Linux (https://k1ss.org).
-#
-# Created by Craig Sloggett.
 
 # Import helper functions.
 
@@ -75,12 +73,31 @@ setup_repo_directory() {
 	ln -s "$HOME/.local/src/github.com/kisslinux/repo/extra/" "$HOME/.local/repos/kisslinux/extra"
 }
 
+setup_repo_directory() {
+	# Source Directories
+	mkdir -p "$HOME/.local/src/github.com/kisslinux"
+	mkdir -p "$HOME/.local/src/github.com/nerditup"
+
+	# Repo Directory
+	mkdir -p "$HOME/.local/repos/kisslinux"
+
+	# Clone the source repositories.
+	( cd "$HOME/.local/src/github.com/kisslinux" && git clone https://github.com/kisslinux/repo.git )
+	( cd "$HOME/.local/src/github.com/nerditup" && git clone https://github.com/nerditup/kisslinux.git )
+
+	ln -s "$HOME/.local/src/github.com/nerditup/kisslinux/" "$HOME/.local/repos/kisslinux/personal"
+	ln -s "$HOME/.local/src/github.com/kisslinux/repo/core/" "$HOME/.local/repos/kisslinux/core"
+	ln -s "$HOME/.local/src/github.com/kisslinux/repo/extra/" "$HOME/.local/repos/kisslinux/extra"
+}
+
 main() {
     # Globally disable globbing and enable exit-on-error.
     set -ef
 
     cd $HOME
 
+    # prepare the disk
+    # mount the disk
     create_swapfile
     create_cmdline $root_partition
 
@@ -89,6 +106,12 @@ main() {
     curl -L -O "$url/kiss-chroot-2020.9-2.tar.xz"
 
     ( cd /mnt && tar xvf "$HOME/kiss-chroot-2020.9-2.tar.xz" )
+
+    # Create regular user.
+    chroot_helper -t /mnt adduser nerditup
+
+    # Setup repos?
+    chroot_helper -t /mnt $(setup_repo_directory)
 
     # Set the hostname.
     printf '%s\n' "$hostname" > /mnt/etc/hostname
