@@ -56,14 +56,6 @@ create_cmdline () {
 }
 
 chroot_helper () {
-
-    # Parse the options with `getopts`
-    # Pull out optional parameter, username.
-    # -> if username is omitted, use default of root.
-    # Do some validation.
-    # Setup our environment variables.
-    # chroooooot!
-
     # getopts /optstring/ /name/ [/arg/...]
     while getopts :t:u: name; do
         case $name in
