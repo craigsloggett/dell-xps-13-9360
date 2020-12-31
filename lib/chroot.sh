@@ -31,10 +31,9 @@ chroot_helper() {
           MAKEFLAGS="${MAKEFLAGS:--j$(nproc 2>/dev/null || printf '1')}"
         )
 
-    # Send a command based on what was supplied as input parameters.
+    # Send a command if present, otherwise login.
     [ -n "${*:-}" ] && cmd=(-c "$*")
 
-    # A simple chroot wrapper to execute commands in the new environment.	
     chroot "${chroot_args[@]}" -- "$target" \
         /usr/bin/env -i "${env[@]}" \
         /bin/sh -l "${cmd[@]}"
