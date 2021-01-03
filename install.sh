@@ -33,19 +33,26 @@ mount_disk () {
 }
 
 create_swapfile () {
-    root=$root_mount_point
-    block_size=$(stat -fc %s $root)
-    block_count="4M"
+    block_size="$(stat -fc %s $1)"
 
     # Create the /var directory.
-    mkdir -p "$root/var"
+    mkdir -p "$1/var"
 
     # Generate the swapfile.
-    dd if=/dev/zero of="$root/var/swapfile" bs=$block_size count=$block_count
+    dd if=/dev/zero of="$1/var/swapfile" bs=$block_size count=$(( block_size * 1024 ))
 
     # Set the permissions on the swapfile to 600.
-    chmod 600 "$root/var/swapfile"
-    mkswap "$root/var/swapfile"
+    chmod 600 "$1/var/swapfile"
+    mkswap "$1/var/swapfile"
+}
+
+makeSwap() {
+  # TODO check currently available swapspace first
+  swapFile=$(mktemp /tmp/nixos-infect.XXXXX.swp)
+  dd if=/dev/zero "of=$swapFile" bs=1M count=$((1*1024))
+  chmod 0600 "$swapFile"
+  mkswap "$swapFile"
+  swapon -v "$swapFile"
 }
 
 create_cmdline () {
