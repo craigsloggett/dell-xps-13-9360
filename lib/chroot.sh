@@ -2,11 +2,19 @@
 #
 # A simple chroot helper script.
 
+# NAME
+#   chroot_helper - run a command or interactive shell with special root directory
+#
+# SYNOPSIS
+#   chroot [OPTION] NEWROOT [COMMAND [ARG]...]
+#
+# This helper wraps the GNU chroot command and adds environment variables for
+# convenience.
+
 chroot_helper() {
     # getopts /optstring/ /name/ [/arg/...]
-    while getopts :t:u: name; do
+    while getopts :u: name; do
         case $name in
-            t  )  target="$OPTARG" ;; 
             u  )  username="$OPTARG" ;;
             :  )  printf '%s: Argument is missing.\n' "$OPTARG" ;;
             \? )  printf '%s: Invalid option.\n' "$OPTARG" ;;
@@ -15,12 +23,14 @@ chroot_helper() {
     shift $(( OPTIND - 1 ))
 
     # Target must be present and valid.
-    [ -z "${target:-}" ] && { printf 'Target must be present.\n'; return 1; }
-    [ -d "${target:-}" ] || { printf 'Target must be a valid directory.\n'; return 1; }
+    [ -z "$1" ] || newroot="$1"
+    [ -z "${newroot:-}" ] && { printf 'Target must be present.\n'; return 1; }
+    [ -d "${newroot:-}" ] || { printf 'Target must be a valid directory.\n'; return 1; }
+    shift 1
 
     # Send a command if present, otherwise use the defaults (interactive).
     [ -n "${*:-}" ] && set -- -c "$*"
-    set -- /bin/sh -l "$@"
+    set -- /bin/sh -i -l "$@"
 
     set -- HOME="${username:+/home}/${username:-root}" "$@"
     set -- TERM="$TERM" "$@"
@@ -31,10 +41,11 @@ chroot_helper() {
     set -- MAKEFLAGS="${MAKEFLAGS:--j$(nproc 2>/dev/null || printf '1')}" "$@"
     set -- /usr/bin/env -i "$@"
 
-    set -- "$target" "$@"
+    set -- "$newroot" "$@"
 
     # Specify the username if present, otherwise use the defaults (root).
     [ -n "${username:-}" ] && set -- --userspec "$username" -- "$@"
 
+    # chroot [OPTION] newroot [COMMAND [ARG]...]
     chroot "$@"
 }
