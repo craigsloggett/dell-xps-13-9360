@@ -5,6 +5,8 @@
 create_swapfile() {
     # Check the blocksize of the given root filesystem.
     block_size="$(stat -fc %s $1)"
+
+    # Create a swapfile with a size equal to double the amount of memory of the system.
     mem_total_kb="$(grep MemTotal /proc/meminfo | awk '{print $2}')"
     block_count="$(( mem_total_kb * 1024 / block_size * 2 ))"
 
