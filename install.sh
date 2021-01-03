@@ -6,6 +6,7 @@
 # Import helper functions.
 
 source lib/chroot.sh
+source lib/create_swapfile.sh
 
 # Configuration Parameters
 
@@ -30,29 +31,6 @@ mount_disk () {
     # Create the /boot directory.
     # Mount the EFI partition to /mnt/boot 
     :
-}
-
-create_swapfile () {
-    block_size="$(stat -fc %s $1)"
-
-    # Create the /var directory.
-    mkdir -p "$1/var"
-
-    # Generate the swapfile.
-    dd if=/dev/zero of="$1/var/swapfile" bs=$block_size count=$(( block_size * 1024 ))
-
-    # Set the permissions on the swapfile to 600.
-    chmod 600 "$1/var/swapfile"
-    mkswap "$1/var/swapfile"
-}
-
-makeSwap() {
-  # TODO check currently available swapspace first
-  swapFile=$(mktemp /tmp/nixos-infect.XXXXX.swp)
-  dd if=/dev/zero "of=$swapFile" bs=1M count=$((1*1024))
-  chmod 0600 "$swapFile"
-  mkswap "$swapFile"
-  swapon -v "$swapFile"
 }
 
 create_cmdline () {
@@ -88,7 +66,7 @@ main() {
 
     # prepare the disk
     # mount the disk
-    create_swapfile
+    create_swapfile $root_partition
     create_cmdline $root_partition
 
     # Download the kiss-chroot.
