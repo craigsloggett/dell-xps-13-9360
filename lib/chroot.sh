@@ -22,11 +22,8 @@ chroot_helper() {
     done
     shift $(( OPTIND - 1 ))
 
-    # Target must be present and valid.
-    [ -z "$1" ] || newroot="$1"
-    [ -z "${newroot:-}" ] && { printf 'Target must be present.\n'; return 1; }
-    [ -d "${newroot:-}" ] || { printf 'Target must be a valid directory.\n'; return 1; }
-    shift 1
+    newroot="$1"
+    [ -z "$1" ] || shift 1
 
     # Send a command if present, otherwise use the defaults (interactive).
     [ -n "${*:-}" ] && set -- -c "$*"
