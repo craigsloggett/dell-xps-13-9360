@@ -1,18 +1,9 @@
 #!/bin/sh
 #
-# A simple chroot helper script.
-
-# NAME
-#   chroot_helper - run a command or interactive shell with special root directory
-#
-# SYNOPSIS
-#   chroot [OPTION] NEWROOT [COMMAND [ARG]...]
-#
-# This helper wraps the GNU chroot command and adds environment variables for
+# A wrapper for the GNU chroot command which adds environment variables for
 # convenience.
 
 chroot_helper() {
-    # getopts /optstring/ /name/ [/arg/...]
     while getopts :u: name; do
         case $name in
             u  )  username="$OPTARG" ;;
@@ -22,8 +13,7 @@ chroot_helper() {
     done
     shift $(( OPTIND - 1 ))
 
-    newroot="$1"
-    [ -z "$1" ] || shift 1
+    newroot="$1" && [ -n "$1" ] && shift 1
 
     # Send a command if present, otherwise use the defaults (interactive).
     [ -n "${*:-}" ] && set -- -c "$*"
@@ -43,6 +33,5 @@ chroot_helper() {
     # Specify the username if present, otherwise use the defaults (root).
     [ -n "${username:-}" ] && set -- --userspec "$username" -- "$@"
 
-    # chroot [OPTION] newroot [COMMAND [ARG]...]
     chroot "$@"
 }
