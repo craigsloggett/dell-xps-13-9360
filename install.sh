@@ -66,7 +66,7 @@ main() {
 
     # prepare the disk
     # mount the disk
-    create_swapfile $root_partition
+    create_swapfile $root_mount_point
     create_cmdline $root_partition
 
     # Download the kiss-chroot.

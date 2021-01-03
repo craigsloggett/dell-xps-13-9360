@@ -6,7 +6,7 @@ create_swapfile() {
     # Check the blocksize of the given root filesystem.
     block_size="$(stat -fc %s $1)"
     mem_total_kb="$(grep MemTotal /proc/meminfo | awk '{print $2}')"
-    block_count="$(( mem_total_kb * 1024 / block_size ))"
+    block_count="$(( mem_total_kb * 1024 / block_size * 2 ))"
 
     mkdir -p "$1/var"
 
