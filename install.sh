@@ -77,9 +77,9 @@ main() {
     # Setup repos?
     setup_repo_directory /mnt/home/nerditup
 
-	chroot_helper -u nerditup ln -s "~/.local/src/github.com/nerditup/kisslinux/" "~/.local/repos/kisslinux/personal"
-	chroot_helper -u nerditup ln -s "~/.local/src/github.com/kisslinux/repo/core/" "~/.local/repos/kisslinux/core"
-	chroot_helper -u nerditup ln -s "~/.local/src/github.com/kisslinux/repo/extra/" "~/.local/repos/kisslinux/extra"
+	chroot_helper -u nerditup /mnt ln -s "~/.local/src/github.com/nerditup/kisslinux/" "~/.local/repos/kisslinux/personal"
+	chroot_helper -u nerditup /mnt ln -s "~/.local/src/github.com/kisslinux/repo/core/" "~/.local/repos/kisslinux/core"
+	chroot_helper -u nerditup /mnt ln -s "~/.local/src/github.com/kisslinux/repo/extra/" "~/.local/repos/kisslinux/extra"
 
     # Set the hostname.
     printf '%s\n' "$hostname" > /mnt/etc/hostname
