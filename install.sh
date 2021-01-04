@@ -52,10 +52,6 @@ setup_repo_directory() {
 	# Clone the source repositories.
 	( cd "$1/.local/src/github.com/kisslinux" && git clone https://github.com/kisslinux/repo.git )
 	( cd "$1/.local/src/github.com/nerditup" && git clone https://github.com/nerditup/kisslinux.git )
-
-	ln -s "$1/.local/src/github.com/nerditup/kisslinux/" "$1/.local/repos/kisslinux/personal"
-	ln -s "$1/.local/src/github.com/kisslinux/repo/core/" "$1/.local/repos/kisslinux/core"
-	ln -s "$1/.local/src/github.com/kisslinux/repo/extra/" "$1/.local/repos/kisslinux/extra"
 }
 
 main() {
@@ -76,10 +72,14 @@ main() {
     ( cd /mnt && tar xvf "$HOME/kiss-chroot-2020.9-2.tar.xz" )
 
     # Create regular user.
-    chroot_helper -t /mnt adduser nerditup
+    chroot_helper /mnt adduser nerditup
 
     # Setup repos?
     setup_repo_directory /mnt/home/nerditup
+
+	chroot_helper -u nerditup ln -s "~/.local/src/github.com/nerditup/kisslinux/" "~/.local/repos/kisslinux/personal"
+	chroot_helper -u nerditup ln -s "~/.local/src/github.com/kisslinux/repo/core/" "~/.local/repos/kisslinux/core"
+	chroot_helper -u nerditup ln -s "~/.local/src/github.com/kisslinux/repo/extra/" "~/.local/repos/kisslinux/extra"
 
     # Set the hostname.
     printf '%s\n' "$hostname" > /mnt/etc/hostname
