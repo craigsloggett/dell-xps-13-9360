@@ -3,34 +3,62 @@
 # This is a simple install script written in POSIX shell
 # to be used to install KISS Linux (https://k1ss.org).
 
-# Import helper functions.
-
-source lib/chroot.sh
-source lib/create_swapfile.sh
-
 # Configuration Parameters
 
-efi_system_partition=/dev/nvme0n1p1
-root_partition=/dev/nvme0n1p2
-root_mount_point=/mnt
-hostname=xps
-ssid=Jupiter-WiFi-5GHz
+NEW_ROOT=/mnt
+EFI_PARTITION=/dev/nvme0n1p1
+ROOT_PARTITION=/dev/nvme0n1p2
 
 # Useful Functions
 
-prepare_disk () {
-    # Format the drive using either nvme format or dd.
-    # Partition the disk (using GPT).
-    # Format the EFI partition as FAT.
-    # Format the root partition as ext4.
-    :
+nchroot() {
+    while getopts :u: name; do
+        case $name in
+            u  )  username="$OPTARG" ;;
+            :  )  printf '%s: Argument is missing.\n' "$OPTARG" ;;
+            \? )  printf '%s: Invalid option.\n' "$OPTARG" ;;
+        esac
+    done
+    shift $(( OPTIND - 1 ))
+
+    [ -d "$1" ] && new_root="$1" || new_root="NEW_ROOT"
+    [ -n "$1" ] && shift 1
+
+    # Send a command if present, otherwise use the defaults (interactive).
+    [ -n "${*:-}" ] && set -- -c "$*"
+    set -- /bin/sh -i -l "$@"
+
+    set -- HOME="${username:+/home}/${username:-root}" "$@"
+    set -- TERM="$TERM" "$@"
+    set -- SHELL=/bin/sh "$@"
+    set -- USER="${username:-root}" "$@"
+    set -- CFLAGS="${CFLAGS:--march=native -mtune=generic -pipe -Os}" "$@"
+    set -- CXXFLAGS="${CXXFLAGS:--march=native -mtune=generic -pipe -Os}" "$@"
+    set -- MAKEFLAGS="${MAKEFLAGS:--j$(nproc 2>/dev/null || printf '1')}" "$@"
+    set -- /usr/bin/env -i "$@"
+
+    set -- "$new_root" "$@"
+
+    # Specify the username if present, otherwise use the defaults (root).
+    [ -n "${username:-}" ] && set -- --userspec "$username" -- "$@"
+
+    chroot "$@"
 }
 
-mount_disk () {
-    # Mount the root partition to /mnt
-    # Create the /boot directory.
-    # Mount the EFI partition to /mnt/boot 
-    :
+create_swapfile() {
+    # Check the blocksize of the given root filesystem.
+    block_size="$(stat -fc %s $1)"
+
+    # Create a swapfile with a size equal to double the amount of memory of the system.
+    mem_total_kb="$( grep MemTotal /proc/meminfo | awk '{print $2}' )"
+    block_count="$(( mem_total_kb * 1024 / block_size * 2 ))"
+
+    mkdir -p "$1/var"
+
+    dd if=/dev/zero of="$1/var/swapfile" bs="$block_size" count="$block_count"
+
+    chmod 600 "$1/var/swapfile"
+    mkswap "$1/var/swapfile"
 }
 
 create_cmdline () {
@@ -76,7 +104,7 @@ main() {
     ( cd /mnt && tar xvf "$HOME/kiss-chroot-2020.9-2.tar.xz" )
 
     # Create regular user.
-    chroot_helper /mnt adduser nerditup
+    nchroot /mnt adduser nerditup
 
     # Setup repos?
     setup_repo_directory /mnt/home/nerditup
