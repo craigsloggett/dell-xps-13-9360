@@ -69,33 +69,24 @@ create_cmdline () {
     printf '%s\n' "root=PARTUUID=$id" > ${root_mount_point:-}/boot/cmdline.txt
 }
 
-setup_repo_directory() {
-	# Source Directories
-	chroot_helper -u nerditup /mnt mkdir -p "$1/.local/src/github.com/kisslinux"
-	chroot_helper -u nerditup /mnt mkdir -p "$1/.local/src/github.com/nerditup"
-
-	# Repo Directory
-    chroot_helper -u nerditup /mnt mkdir -p "$1/.local/repos/kisslinux"
-
-	# Clone the source repositories.
-	chroot_helper -u nerditup /mnt cd "$1/.local/src/github.com/kisslinux" && git clone https://github.com/kisslinux/repo.git
-	chroot_helper -u nerditup /mnt cd "$1/.local/src/github.com/nerditup" && git clone https://github.com/nerditup/kisslinux.git
-
-	chroot_helper -u nerditup /mnt ln -s "~/.local/src/github.com/nerditup/kisslinux/" "~/.local/repos/kisslinux/personal"
-	chroot_helper -u nerditup /mnt ln -s "~/.local/src/github.com/kisslinux/repo/core/" "~/.local/repos/kisslinux/core"
-	chroot_helper -u nerditup /mnt ln -s "~/.local/src/github.com/kisslinux/repo/extra/" "~/.local/repos/kisslinux/extra"
-}
-
 main() {
     # Globally disable globbing and enable exit-on-error.
     set -ef
 
     cd $HOME
 
+    ################
+    # Prepare Disk #
+    ################
+
     # prepare the disk
     # mount the disk
-    create_swapfile $root_mount_point
-    create_cmdline $root_partition
+    create_swapfile $NEW_ROOT
+    create_cmdline $ROOT_PARTITION
+
+    #############
+    # Prepare / #
+    #############
 
     # Download the kiss-chroot.
     url=https://github.com/kisslinux/repo/releases/download/2020.9-2
@@ -103,15 +94,10 @@ main() {
 
     ( cd /mnt && tar xvf "$HOME/kiss-chroot-2020.9-2.tar.xz" )
 
-    # Create regular user.
-    nchroot /mnt adduser nerditup
+    ######################
+    # Configure Hardware #
+    ######################
 
-    # Setup repos?
-    setup_repo_directory /mnt/home/nerditup
-
-    # Set the hostname.
-    printf '%s\n' "$hostname" > /mnt/etc/hostname
-    
     # Download firmware.
     url=https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git/snapshot
     ( 
@@ -129,13 +115,102 @@ main() {
     mkdir -p /mnt/etc/rc.d
     printf '%s\n%s\n' "modprobe ath10k_core" "modprobe ath10k_pci" > /mnt/etc/rc.d/ath10k.boot
 
+    ################
+    # Configure OS #
+    ################
+
+    # Set the hostname.
+    printf '%s\n' "$hostname" > /mnt/etc/hostname
+
+    # Generate the fstab file.
+    # TODO: Write my own genfstab.
+    genfstab > /mnt/etc/fstab
+
+
+    ##########################
+    # Configure Regular User #
+    ##########################
+
+    # Create regular user.
+    nchroot /mnt adduser nerditup
+
+    # Add dotfiles to home
+
+    #
+    # KISS Specific implementation.
+    #
+
+    # Setup profile
+	nchroot -u nerditup /mnt cat <<- 'EOF' > "$HOME/.profile"
+        # KISS Repositories
+        export KISS_PATH=''
+        KISS_PATH=$KISS_PATH:$HOME/.local/repos/kisslinux/personal
+        KISS_PATH=$KISS_PATH:$HOME/.local/repos/kisslinux/core
+        KISS_PATH=$KISS_PATH:$HOME/.local/repos/kisslinux/extra
+        
+        # Compiler Options
+        export CFLAGS="-O3 -pipe -march=native"
+        export CXXFLAGS="$CFLAGS"
+        export MAKEFLAGS="-j4"
+    EOF
+
+    
+    #############################
+    # Configure Package Manager #
+    #############################
+
+    #
+    # Setup Repositories
+    #
+
+	# Source Directories
+	nchroot -u nerditup /mnt mkdir -p "$HOME/.local/src/github.com/kisslinux"
+	nchroot -u nerditup /mnt mkdir -p "$HOME/.local/src/github.com/nerditup"
+
+	# Repo Directory
+    nchroot -u nerditup /mnt mkdir -p "$HOME/.local/repos/kisslinux"
+
+	# Clone the source repositories.
+	nchroot -u nerditup /mnt cd "$HOME/.local/src/github.com/kisslinux" && git clone https://github.com/kisslinux/repo.git
+	nchroot -u nerditup /mnt cd "$HOME/.local/src/github.com/nerditup" && git clone https://github.com/nerditup/kisslinux.git
+
+	nchroot -u nerditup /mnt ln -s "~/.local/src/github.com/nerditup/kisslinux/" "~/.local/repos/kisslinux/personal"
+	nchroot -u nerditup /mnt ln -s "~/.local/src/github.com/kisslinux/repo/core/" "~/.local/repos/kisslinux/core"
+	nchroot -u nerditup /mnt ln -s "~/.local/src/github.com/kisslinux/repo/extra/" "~/.local/repos/kisslinux/extra"
+
+    # Update the package manager
+    nchroot -u nerditup /mnt kiss update
+
+    # Rebuild all "installed" packages.
+    nchroot -u nerditup /mnt ( cd /var/db/kiss/installed && set +f; kiss build * )
+
+    # Install additional system administration utilities.
+    nchroot -u nerditup /mnt kiss b e2fsprogs
+    nchroot -u nerditup /mnt kiss b dosfstools
+    nchroot -u nerditup /mnt kiss b efibootmgr
+    nchroot -u nerditup /mnt kiss i e2fsprogs
+    nchroot -u nerditup /mnt kiss i dosfstools
+    nchroot -u nerditup /mnt kiss i efibootmgr
+
+    # Install the Linux kernel.
+    nchroot -u nerditup /mnt kiss b linux
+    nchroot -u nerditup /mnt kiss i linux
+
+    nchroot /mnt efibootmgr --create --disk /dev/nvme0n1 --part 1 --loader /EFI/boot/bootx64.efi --label "Linux"
+
+    # Install an init system.
+    nchroot -u nerditup /mnt kiss b baseinit
+    nchroot -u nerditup /mnt kiss i baseinit
+
+    #####################
+    # Configure Network #
+    #####################
+
     # Setup wpa_supplicant
     mkdir -p /mnt/etc/wpa_supplicant
     printf '%s\n\n' "ctrl_interface=DIR=/var/run/wpa_supplicant" > /mnt/etc/wpa_supplicant/wpa_supplicant.conf
-    wpa_passphrase "$ssid" >> /etc/wpa_supplicant/wpa_supplicant.conf
 
-    # Generate the fstab file.
-    genfstab > /mnt/etc/fstab
+    wpa_passphrase "$ssid" >> /etc/wpa_supplicant/wpa_supplicant.conf
 }
 
 main "$@"
