@@ -6,6 +6,7 @@
 # Configuration Parameters
 
 NEW_ROOT=/mnt
+HOSTNAME=xps
 
 # Useful Functions
 
@@ -73,8 +74,6 @@ main() {
     # Globally disable globbing and enable exit-on-error.
     set -ef
 
-    cd $HOME
-
     ################
     # Prepare Disk #
     ################
@@ -92,38 +91,23 @@ main() {
     #############
 
     # Download the kiss-chroot.
+    cd $HOME
     url=https://github.com/kisslinux/repo/releases/download/2020.9-2
     curl -L -O "$url/kiss-chroot-2020.9-2.tar.xz"
 
-    ( cd /mnt && tar xvf "$HOME/kiss-chroot-2020.9-2.tar.xz" )
-
-    ######################
-    # Configure Hardware #
-    ######################
-
-    # Download firmware.
-    url=https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git/snapshot
-    ( 
-      cd /mnt/root && 
-      curl -L -O "$url/linux-firmware-20201218.tar.gz" &&
-      tar xvf linux-firmware-20201218.tar.gz
-    )
-    
-    # Install ath10k wireless firmware.
-    firmware_dir=/mnt/usr/lib/firmware
-    mkdir -p "$firmware_dir/ath10k/QCA6174"
-    cp -r /mnt/root/linux-firmware-20201218/ath10k/QCA6174/hw3.0 "$firmware_dir/ath10k/QCA6174"
-
-    # Load the ath10k wireless drivers on boot.
-    mkdir -p /mnt/etc/rc.d
-    printf '%s\n%s\n' "modprobe ath10k_core" "modprobe ath10k_pci" > /mnt/etc/rc.d/ath10k.boot
+    ( cd "$NEW_ROOT" && tar xvf "$HOME/kiss-chroot-2020.9-2.tar.xz" )
 
     ################
     # Configure OS #
     ################
 
-    # Set the hostname.
-    printf '%s\n' "$hostname" > /mnt/etc/hostname
+    # /etc/hostname
+    printf '%s\n' "$HOSTNAME" > "$NEW_ROOT/etc/hostname"
+    # /etc/hosts
+	cat <<- 'EOF' > "$NEW_ROOT/etc/hosts"
+        127.0.0.1   localhost
+        127.0.1.1   $HOSTNAME.nerditup.ca $HOSTNAME
+    EOF
 
     # Generate the fstab file.
     # TODO: Write my own genfstab.
@@ -204,6 +188,29 @@ main() {
     # Install an init system.
     nchroot -u nerditup /mnt kiss b baseinit
     nchroot -u nerditup /mnt kiss i baseinit
+
+    ######################
+    # Configure Hardware #
+    ######################
+
+    # Download firmware.
+    url=https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git/snapshot
+    ( 
+      cd "$NEW_ROOT/root" && 
+      curl -L -O "$url/linux-firmware-20201218.tar.gz" &&
+      tar xvf linux-firmware-20201218.tar.gz
+    )
+    
+    # Install ath10k wireless firmware.
+    ath10k_firmware_dir="$NEW_ROOT/root/linux-firmware-20201218/ath10k/QCA6174/hw3.0"
+    system_firmware_dir="$NEW_ROOT/lib/firmware"
+    mkdir -p "$system_firmware_dir/ath10k/QCA6174"
+    cp -r "$ath10k_firmware_dir" "$system_firmware_dir/ath10k/QCA6174"
+
+    # Load the ath10k wireless drivers on boot.
+    mkdir -p "$NEW_ROOT/etc/rc.d"
+    printf '%s\n' "modprobe ath10k_core" > "$NEW_ROOT/etc/rc.d/ath10k.boot"
+    printf '%s\n' "modprobe ath10k_pci" >> "$NEW_ROOT/etc/rc.d/ath10k.boot"
 
     #####################
     # Configure Network #
