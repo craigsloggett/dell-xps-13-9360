@@ -7,6 +7,7 @@
 
 NEW_ROOT=/mnt
 HOSTNAME=xps
+USERNAME=nerditup
 
 # Useful Functions
 
@@ -104,22 +105,21 @@ main() {
     # /etc/hostname
     printf '%s\n' "$HOSTNAME" > "$NEW_ROOT/etc/hostname"
     # /etc/hosts
-	cat <<- EOF > "$NEW_ROOT/etc/hosts"
+    cat <<- EOF > "$NEW_ROOT/etc/hosts"
         127.0.0.1   localhost
         127.0.1.1   $HOSTNAME.nerditup.ca $HOSTNAME
     EOF
 
     # Generate the fstab file.
     # TODO: Write my own genfstab.
-    genfstab > /mnt/etc/fstab
-
+    genfstab -U "$NEW_ROOT" > "$NEW_ROOT/etc/fstab"
 
     ##########################
     # Configure Regular User #
     ##########################
 
     # Create regular user.
-    nchroot /mnt adduser nerditup
+    nchroot "$NEW_ROOT" adduser "$USERNAME"
 
     # Add dotfiles to home
 
@@ -128,7 +128,7 @@ main() {
     #
 
     # Setup profile
-	nchroot -u nerditup /mnt cat <<- 'EOF' > "$HOME/.profile"
+	nchroot -u "$USERNAME" "$NEW_ROOT" cat <<- 'EOF' > "$NEW_ROOT/home/$USERNAME/.profile"
         # KISS Repositories
         export KISS_PATH=''
         KISS_PATH=$KISS_PATH:$HOME/.local/repos/kisslinux/personal
@@ -151,43 +151,43 @@ main() {
     #
 
 	# Source Directories
-	nchroot -u nerditup /mnt mkdir -p "$HOME/.local/src/github.com/kisslinux"
-	nchroot -u nerditup /mnt mkdir -p "$HOME/.local/src/github.com/nerditup"
+	nchroot -u $USERNAME $NEW_ROOT mkdir -p "$HOME/.local/src/github.com/kisslinux"
+	nchroot -u $USERNAME $NEW_ROOT mkdir -p "$HOME/.local/src/github.com/nerditup"
 
 	# Repo Directory
-    nchroot -u nerditup /mnt mkdir -p "$HOME/.local/repos/kisslinux"
+    nchroot -u $USERNAME $NEW_ROOT mkdir -p "$HOME/.local/repos/kisslinux"
 
 	# Clone the source repositories.
-	nchroot -u nerditup /mnt cd "$HOME/.local/src/github.com/kisslinux" && git clone https://github.com/kisslinux/repo.git
-	nchroot -u nerditup /mnt cd "$HOME/.local/src/github.com/nerditup" && git clone https://github.com/nerditup/kisslinux.git
+	nchroot -u $USERNAME $NEW_ROOT cd "$HOME/.local/src/github.com/kisslinux" && git clone https://github.com/kisslinux/repo.git
+	nchroot -u $USERNAME $NEW_ROOT cd "$HOME/.local/src/github.com/nerditup" && git clone https://github.com/nerditup/kisslinux.git
 
-	nchroot -u nerditup /mnt ln -s "~/.local/src/github.com/nerditup/kisslinux/" "~/.local/repos/kisslinux/personal"
-	nchroot -u nerditup /mnt ln -s "~/.local/src/github.com/kisslinux/repo/core/" "~/.local/repos/kisslinux/core"
-	nchroot -u nerditup /mnt ln -s "~/.local/src/github.com/kisslinux/repo/extra/" "~/.local/repos/kisslinux/extra"
+	nchroot -u $USERNAME $NEW_ROOT ln -s "~/.local/src/github.com/nerditup/kisslinux/" "~/.local/repos/kisslinux/personal"
+	nchroot -u $USERNAME $NEW_ROOT ln -s "~/.local/src/github.com/kisslinux/repo/core/" "~/.local/repos/kisslinux/core"
+	nchroot -u $USERNAME $NEW_ROOT ln -s "~/.local/src/github.com/kisslinux/repo/extra/" "~/.local/repos/kisslinux/extra"
 
     # Update the package manager
-    nchroot -u nerditup /mnt kiss update
+    nchroot -u $USERNAME $NEW_ROOT kiss update
 
     # Rebuild all "installed" packages.
-    nchroot -u nerditup /mnt ( cd /var/db/kiss/installed && set +f; kiss build * )
+    nchroot -u $USERNAME $NEW_ROOT ( cd /var/db/kiss/installed && set +f; kiss build * )
 
     # Install additional system administration utilities.
-    nchroot -u nerditup /mnt kiss b e2fsprogs
-    nchroot -u nerditup /mnt kiss b dosfstools
-    nchroot -u nerditup /mnt kiss b efibootmgr
-    nchroot -u nerditup /mnt kiss i e2fsprogs
-    nchroot -u nerditup /mnt kiss i dosfstools
-    nchroot -u nerditup /mnt kiss i efibootmgr
+    nchroot -u $USERNAME $NEW_ROOT kiss b e2fsprogs
+    nchroot -u $USERNAME $NEW_ROOT kiss b dosfstools
+    nchroot -u $USERNAME $NEW_ROOT kiss b efibootmgr
+    nchroot -u $USERNAME $NEW_ROOT kiss i e2fsprogs
+    nchroot -u $USERNAME $NEW_ROOT kiss i dosfstools
+    nchroot -u $USERNAME $NEW_ROOT kiss i efibootmgr
 
     # Install the Linux kernel.
-    nchroot -u nerditup /mnt kiss b linux
-    nchroot -u nerditup /mnt kiss i linux
+    nchroot -u $USERNAME $NEW_ROOT kiss b linux
+    nchroot -u $USERNAME $NEW_ROOT kiss i linux
 
     nchroot /mnt efibootmgr --create --disk /dev/nvme0n1 --part 1 --loader /EFI/boot/bootx64.efi --label "Linux"
 
     # Install an init system.
-    nchroot -u nerditup /mnt kiss b baseinit
-    nchroot -u nerditup /mnt kiss i baseinit
+    nchroot -u $USERNAME $NEW_ROOT kiss b baseinit
+    nchroot -u $USERNAME $NEW_ROOT kiss i baseinit
 
     ######################
     # Configure Hardware #
