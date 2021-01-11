@@ -81,7 +81,7 @@ main() {
     # prepare the disk
     # mount the disk
 
-    [ -z "$NEW_ROOT" ] || return 1
+    [ -z "$NEW_ROOT" ] && return 1
 
     create_swapfile
     create_cmdline
@@ -104,7 +104,7 @@ main() {
     # /etc/hostname
     printf '%s\n' "$HOSTNAME" > "$NEW_ROOT/etc/hostname"
     # /etc/hosts
-	cat <<- 'EOF' > "$NEW_ROOT/etc/hosts"
+	cat <<- EOF > "$NEW_ROOT/etc/hosts"
         127.0.0.1   localhost
         127.0.1.1   $HOSTNAME.nerditup.ca $HOSTNAME
     EOF
