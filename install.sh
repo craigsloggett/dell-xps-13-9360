@@ -158,23 +158,29 @@ main() {
     # within the new environment.
 
 	# Source Directories
-    repo_src_dir='$HOME/.local/src/github.com/kisslinux'
-    personal_repo_src_dir='$HOME/.local/src/github.com/nerditup'
-	nchroot -u $USERNAME $NEW_ROOT mkdir -p "$repo_src_dir"
-	nchroot -u $USERNAME $NEW_ROOT mkdir -p "$personal_repo_src_dir"
+    repo_src='$HOME/.local/src/github.com/kisslinux'
+    repo_src_personal='$HOME/.local/src/github.com/nerditup'
+
+	nchroot -u $USERNAME $NEW_ROOT mkdir -p "$repo_src"
+	nchroot -u $USERNAME $NEW_ROOT mkdir -p "$repo_src_personal"
 
 	# Clone the source repositories.
-    core_url=https://github.com/kisslinux/repo.git
-    personal_url=https://github.com/nerditup/kisslinux.git
-	nchroot -u $USERNAME $NEW_ROOT git clone "$core_url" '$HOME/.local/src/github.com/kisslinux'
-	nchroot -u $USERNAME $NEW_ROOT git clone "$personal_url" '$HOME/.local/src/github.com/nerditup'
+    repo_url=https://github.com/kisslinux/repo.git
+    repo_url_personal=https://github.com/nerditup/kisslinux.git
+
+	nchroot -u $USERNAME $NEW_ROOT cd "$repo_src" && git clone "$repo_url"
+	nchroot -u $USERNAME $NEW_ROOT cd "$repo_src_personal" && git clone "$repo_url_personal" 
 
 	# Repo Directory
-    nchroot -u $USERNAME $NEW_ROOT mkdir -p '$HOME/.local/repos/kisslinux'
+    repo_dir='$HOME/.local/repos/kisslinux/core'
+    repo_dir_extra='$HOME/.local/repos/kisslinux/extra'
+    repo_dir_personal='$HOME/.local/repos/kisslinux/personal'
 
-	nchroot -u $USERNAME $NEW_ROOT ln -s "~/.local/src/github.com/nerditup/kisslinux/" "~/.local/repos/kisslinux/personal"
-	nchroot -u $USERNAME $NEW_ROOT ln -s "~/.local/src/github.com/kisslinux/repo/core/" "~/.local/repos/kisslinux/core"
-	nchroot -u $USERNAME $NEW_ROOT ln -s "~/.local/src/github.com/kisslinux/repo/extra/" "~/.local/repos/kisslinux/extra"
+    ( set +f; nchroot -u $USERNAME $NEW_ROOT mkdir -p "${repo_dire%/*}"; set -f; )
+
+	nchroot -u $USERNAME $NEW_ROOT ln -s "$repo_src/repo/core" "$repo_dir"
+	nchroot -u $USERNAME $NEW_ROOT ln -s "$repo_src/repo/extra" "$repo_dir_extra"
+	nchroot -u $USERNAME $NEW_ROOT ln -s "$repo_src_personal/kisslinux" "$repo_dir_personal"
 
     # Update the package manager
     nchroot -u $USERNAME $NEW_ROOT kiss update
