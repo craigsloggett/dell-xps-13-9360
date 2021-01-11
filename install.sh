@@ -91,6 +91,8 @@ main() {
     # Prepare / #
     #############
 
+    # TODO: Check if $NEW_ROOT already contains a base filesystem layout.
+
     # Download the kiss-chroot.
     cd $HOME
     url=https://github.com/kisslinux/repo/releases/download/2020.9-2
@@ -104,6 +106,7 @@ main() {
 
     # /etc/hostname
     printf '%s\n' "$HOSTNAME" > "$NEW_ROOT/etc/hostname"
+
     # /etc/hosts
     cat <<- EOF > "$NEW_ROOT/etc/hosts"
         127.0.0.1   localhost
@@ -118,6 +121,8 @@ main() {
     # Configure Regular User #
     ##########################
 
+    # TODO: Check if $NEW_ROOT already has $USERNAME created.
+
     # Create regular user.
     nchroot "$NEW_ROOT" adduser "$USERNAME"
 
@@ -127,20 +132,19 @@ main() {
     # KISS Specific implementation.
     #
 
-    # Setup profile
-	nchroot -u "$USERNAME" "$NEW_ROOT" cat <<- 'EOF' > "$NEW_ROOT/home/$USERNAME/.profile"
+    # ~/.profile
+    cat <<- 'EOF' > "$NEW_ROOT/home/$USERNAME/.profile"
+        # Compiler Options
+        export CFLAGS="-O3 -pipe -march=native"
+        export CXXFLAGS="$CFLAGS"
+        export MAKEFLAGS="-j4"
+
         # KISS Repositories
         export KISS_PATH=''
         KISS_PATH=$KISS_PATH:$HOME/.local/repos/kisslinux/personal
         KISS_PATH=$KISS_PATH:$HOME/.local/repos/kisslinux/core
         KISS_PATH=$KISS_PATH:$HOME/.local/repos/kisslinux/extra
-        
-        # Compiler Options
-        export CFLAGS="-O3 -pipe -march=native"
-        export CXXFLAGS="$CFLAGS"
-        export MAKEFLAGS="-j4"
     EOF
-
     
     #############################
     # Configure Package Manager #
@@ -150,12 +154,15 @@ main() {
     # Setup Repositories
     #
 
+    # Single quoting arguments/commands that contain variables to ensure the value is taken from 
+    # within the new environment.
+
 	# Source Directories
-	nchroot -u $USERNAME $NEW_ROOT mkdir -p "$HOME/.local/src/github.com/kisslinux"
-	nchroot -u $USERNAME $NEW_ROOT mkdir -p "$HOME/.local/src/github.com/nerditup"
+	nchroot -u $USERNAME $NEW_ROOT mkdir -p '$HOME/.local/src/github.com/kisslinux'
+	nchroot -u $USERNAME $NEW_ROOT mkdir -p '$HOME/.local/src/github.com/nerditup'
 
 	# Repo Directory
-    nchroot -u $USERNAME $NEW_ROOT mkdir -p "$HOME/.local/repos/kisslinux"
+    nchroot -u $USERNAME $NEW_ROOT mkdir -p '$HOME/.local/repos/kisslinux'
 
 	# Clone the source repositories.
 	nchroot -u $USERNAME $NEW_ROOT cd "$HOME/.local/src/github.com/kisslinux" && git clone https://github.com/kisslinux/repo.git
