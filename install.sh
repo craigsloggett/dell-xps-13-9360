@@ -6,8 +6,6 @@
 # Configuration Parameters
 
 NEW_ROOT=/mnt
-EFI_PARTITION=/dev/nvme0n1p1
-ROOT_PARTITION=/dev/nvme0n1p2
 
 # Useful Functions
 
@@ -47,26 +45,28 @@ nchroot() {
 
 create_swapfile() {
     # Check the blocksize of the given root filesystem.
-    block_size="$(stat -fc %s $1)"
+    block_size="$( stat -fc %s ${NEW_ROOT:-}/. )"
 
     # Create a swapfile with a size equal to double the amount of memory of the system.
     mem_total_kb="$( grep MemTotal /proc/meminfo | awk '{print $2}' )"
     block_count="$(( mem_total_kb * 1024 / block_size * 2 ))"
 
-    mkdir -p "$1/var"
+    mkdir -p "${NEW_ROOT:-}/var"
 
-    dd if=/dev/zero of="$1/var/swapfile" bs="$block_size" count="$block_count"
+    dd if=/dev/zero of="${NEW_ROOT:-}/var/swapfile" bs="$block_size" count="$block_count"
 
-    chmod 600 "$1/var/swapfile"
-    mkswap "$1/var/swapfile"
+    chmod 600 "${NEW_ROOT:-}/var/swapfile"
+    mkswap "${NEW_ROOT:-}/var/swapfile"
 }
 
 create_cmdline () {
-    line=$(blkid $1)
-    id=${line#*PARTUUID=\"}
-    id=${id%%\"*}
+    root_partition="$( mount | grep "${NEW_ROOT:-/} " | awk '{print $1}' )"
 
-    printf '%s\n' "root=PARTUUID=$id" > ${root_mount_point:-}/boot/cmdline.txt
+    line="$( blkid $root_partition )"
+    id="${line#*PARTUUID=\"}"
+    id="${id%%\"*}"
+
+    printf '%s\n' "root=PARTUUID=$id" > ${NEW_ROOT:-}/boot/cmdline.txt
 }
 
 main() {
@@ -81,8 +81,11 @@ main() {
 
     # prepare the disk
     # mount the disk
-    create_swapfile $NEW_ROOT
-    create_cmdline $ROOT_PARTITION
+
+    [ -z "$NEW_ROOT" ] || return 1
+
+    create_swapfile
+    create_cmdline
 
     #############
     # Prepare / #
