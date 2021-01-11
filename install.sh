@@ -158,15 +158,19 @@ main() {
     # within the new environment.
 
 	# Source Directories
-	nchroot -u $USERNAME $NEW_ROOT mkdir -p '$HOME/.local/src/github.com/kisslinux'
-	nchroot -u $USERNAME $NEW_ROOT mkdir -p '$HOME/.local/src/github.com/nerditup'
+    repo_src_dir='$HOME/.local/src/github.com/kisslinux'
+    personal_repo_src_dir='$HOME/.local/src/github.com/nerditup'
+	nchroot -u $USERNAME $NEW_ROOT mkdir -p "$repo_src_dir"
+	nchroot -u $USERNAME $NEW_ROOT mkdir -p "$personal_repo_src_dir"
+
+	# Clone the source repositories.
+    core_url=https://github.com/kisslinux/repo.git
+    personal_url=https://github.com/nerditup/kisslinux.git
+	nchroot -u $USERNAME $NEW_ROOT git clone "$core_url" '$HOME/.local/src/github.com/kisslinux'
+	nchroot -u $USERNAME $NEW_ROOT git clone "$personal_url" '$HOME/.local/src/github.com/nerditup'
 
 	# Repo Directory
     nchroot -u $USERNAME $NEW_ROOT mkdir -p '$HOME/.local/repos/kisslinux'
-
-	# Clone the source repositories.
-	nchroot -u $USERNAME $NEW_ROOT cd "$HOME/.local/src/github.com/kisslinux" && git clone https://github.com/kisslinux/repo.git
-	nchroot -u $USERNAME $NEW_ROOT cd "$HOME/.local/src/github.com/nerditup" && git clone https://github.com/nerditup/kisslinux.git
 
 	nchroot -u $USERNAME $NEW_ROOT ln -s "~/.local/src/github.com/nerditup/kisslinux/" "~/.local/repos/kisslinux/personal"
 	nchroot -u $USERNAME $NEW_ROOT ln -s "~/.local/src/github.com/kisslinux/repo/core/" "~/.local/repos/kisslinux/core"
