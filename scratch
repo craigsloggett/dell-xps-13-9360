@@ -1,0 +1,171 @@
+# From a live environment
+
+nvme format /dev/nvme0 -ses 1 -n 1
+efibootmgr -b XXXX -B
+
+reboot
+
+cfdisk /dev/nvme0n1
+> gpt
+> 256M EFI
+> 238.2G Linux Filesystem
+
+mkfs.fat  /dev/nvme0n1p1
+mkfs.ext4 /dev/nvme0n1p2
+
+mount /dev/nvme0n1p2 /mnt
+mkdir -p /mnt/boot
+mount /dev/nvme0n1p1 /mnt/boot
+
+# Begin automation 
+
+mkdir -p /mnt/var
+dd if=/dev/zero of=/mnt/var/swapfile bs=4k count=4M
+chmod 600 /mnt/var/swapfile
+
+# Grab the PARTUUID of the root partition.
+blkid /dev/nvme0n1p2 | read -r line; id=${line#*PARTUUID=\"}; id=${id%%\"*};
+printf '%s\n' "root=PARTUUID=$id" > /mnt/boot/cmdline.txt
+
+cd
+url=https://github.com/kisslinux/repo/releases/download/2020.9-2
+curl -L -O "$url/kiss-chroot-2020.9-2.tar.xz"
+
+cd /mnt
+tar xvf "$HOME/kiss-chroot-2020.9-2.tar.xz"
+
+/mnt/bin/kiss-chroot /mnt
+
+# New environment
+
+passwd
+
+adduser nerditup
+
+# Switch to regular user
+
+su - nerditup
+
+# TODO: XDG things here.
+
+git config --global pull.rebase false
+
+cd
+mkdir -p "$HOME/.local/src/github.com/kisslinux"
+cd "$HOME/.local/src/github.com/kisslinux"
+git clone https://github.com/kisslinux/repo.git
+
+cd
+mkdir -p "$HOME/.local/src/github.com/nerditup"
+cd "$HOME/.local/src/github.com/nerditup"
+git clone https://github.com/nerditup/kisslinux.git
+cd
+
+ln -s "$HOME/.local/src/github.com/nerditup/kisslinux/" "$HOME/.local/repos/kisslinux/personal"
+ln -s "$HOME/.local/src/github.com/kisslinux/repo/core/" "$HOME/.local/repos/kisslinux/core"
+ln -s "$HOME/.local/src/github.com/kisslinux/repo/extra/" "$HOME/.local/repos/kisslinux/extra"
+
+vi ~/.profile
+> export KISS_PATH=''
+> KISS_PATH=$KISS_PATH:$HOME/.local/repos/kisslinux/personal
+> KISS_PATH=$KISS_PATH:$HOME/.local/repos/kisslinux/core
+> KISS_PATH=$KISS_PATH:$HOME/.local/repos/kisslinux/extra
+> 
+> export CFLAGS="-O3 -pipe -march=native"
+> export CXXFLAGS="$CFLAGS"     
+> export MAKEFLAGS="-j4"
+
+source ~/.profile
+
+kiss update
+
+cd /var/db/kiss/installed
+kiss build *
+
+cd
+kiss b e2fsprogs
+kiss i e2fsprogs
+
+kiss b dosfstools
+kiss i dosfstools
+
+kiss b wpa_supplicant
+kiss i wpa_supplicant
+
+kiss b dhcpcd
+kiss i dhcpcd
+
+exit
+
+# Back to root
+
+echo HOSTNAME > /etc/hostname
+
+vi /etc/hosts
+> 127.0.0.1  xps.nerditup.ca  xps 
+> ::1        xps.nerditup.ca  xps  ip6-localhost
+
+cd
+curl -L -O "https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git/snapshot/linux-firmware-20201118.tar.gz"
+tar xvf linux-firmware-20201118.tar.gz
+mkdir -p /usr/lib/firmware/ath10k/QCA6174
+cp -r linux-firmware-20201118/ath10k/QCA6174/hw3.0 /usr/lib/firmware/ath10k/QCA6174
+
+# Switch to regular user
+
+su - nerditup
+
+# boot failed because UID of disk is incorrect, need to update linux package to get this 
+# automatically
+ # install util-linux
+ # use proper blkid
+# blkid | while read -r line; do case $line in /dev/sdb1:*) id=${line#*UUID=\"}; id=${id%%\"*}; printf '%s\n' "$id" ;; esac; done
+
+kiss b linux
+kiss i linux
+
+kiss b efibootmgr
+kiss i efibootmgr
+
+exit
+
+# Back to root
+
+efibootmgr --create --disk /dev/nvme0n1 --part 1 --loader /EFI/boot/bootx64.efi --label "Linux"
+
+# Switch to regular user
+
+su - nerditup
+
+kiss b baseinit
+kiss i baseinit
+
+exit
+
+# Back to root
+
+vi /etc/inittab
+> ...
+> # Load the ath10k drivers.
+> ::once:/bin/modprobe ath10k_core
+> ::once:/bin/modprobe ath10k_pci
+
+mkdir -p /etc/wpa_supplicant
+wpa_passphrase SSID >> /etc/wpa_supplicant/wpa_supplicant.conf
+
+# manual test
+wpa_supplicant -B -i wlan0 -c /etc/wpa_supplicant/wpa_supplicant.conf
+dhcpcd wlan0
+
+vi /etc/wpa_supplicant/wpa_supplicant.conf
+> ctrl_interface=/run/wpa_supplicant
+>
+> ...
+
+ln -s /usr/share/dhcpcd/hooks/10-wpa_supplicant /usr/lib/dhcpcd/dhcpcd-hooks/
+ln -s /etc/sv/dhcpcd/ /var/service
+
+# Setup fstab - use swapfile
+
+kiss b openssh
+kiss i openssh
